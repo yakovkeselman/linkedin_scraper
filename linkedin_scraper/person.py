@@ -10,36 +10,17 @@ from .objects import Experience, Education, Scraper
 import os
 
 class Person(Scraper):
-    name = None
-    experiences = []
-    educations = []
-    also_viewed_urls = []
-    linkedin_url = None
-
-    def __init__(self, linkedin_url=None, name=None, experiences=[], educations=[], driver=None, get=True, scrape=True):
+    """Person scraper."""
+    def __init__(self, linkedin_url=None, name=None, driver=None):
         self.linkedin_url = linkedin_url
         self.name = name
-        self.experiences = experiences
-        self.educations = educations
+        self.experiences = []
+        self.educations = []
 
         if driver is None:
-            try:
-                if os.getenv("CHROMEDRIVER") == None:
-                    driver_path = os.path.join(os.path.dirname(__file__), 'drivers/chromedriver')
-                else:
-                    driver_path = os.getenv("CHROMEDRIVER")
-
-                driver = webdriver.Chrome(driver_path)
-            except:
-                driver = webdriver.Chrome()
-
-        if get:
-            driver.get(linkedin_url)
-
+            driver = webdriver.Chrome()
+        driver.get(linkedin_url)
         self.driver = driver
-
-        if scrape:
-            self.scrape()
 
 
     def add_experience(self, experience):
