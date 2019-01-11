@@ -72,8 +72,20 @@ def linked_in_home() -> webdriver.Chrome:
     return driver
 
 
-def person_search(attrs: tuple, driver: webdriver.Chrome) -> list:
+class ChromeDriver:
+    """Generate a single driver."""
+    driver = None
+
+    @classmethod
+    def get(cls) -> webdriver.Chrome:
+        if not cls.driver:
+            cls.driver = linked_in_home()
+        return cls.driver
+
+
+def person_search(attrs: tuple) -> list:
     """Search for a single person; assumes only few results."""
+    driver = ChromeDriver.get()
     if person_search.counter > 0:
         # go back to an empty search window; clearing it does not work.
         driver.execute_script("window.history.go(-1)")
@@ -101,43 +113,35 @@ def person_search(attrs: tuple, driver: webdriver.Chrome) -> list:
 person_search.counter = 0
 
 
-def person_profile(url: str, driver: webdriver.Chrome) -> dict:
+def person_profile(url: str) -> dict:
     """Fetch a person's profile based on their LI URL."""
+    driver = ChromeDriver.get()
     person = Person(url, driver)
     person.scrape(close_on_complete=False, timeout=10)
     sleep(2+5*random())
+    # should be safe to go back once; needed for search and profile to work.
+    driver.execute_script("window.history.go(-1)")
     return person.to_dict()
 
 
-class BrowserTest(unittest.TestCase):
-    @staticmethod
-    def setUpClass():
-        BrowserTest.driver = linked_in_home()
-
-    @staticmethod
-    def tearDownClass():
-        BrowserTest.driver.close()
-        BrowserTest.driver = None
-
-
-class TestSearch(BrowserTest):
+class TestSearch:
     """Test the search functionality."""
     def test_search1(self):
         person = ('Polina', 'Keselman', 'ADP', 'Principal Software Engineer')
-        result = person_search(self.driver, person)
+        result = person_search(person)
         self.assertTrue('https://www.linkedin.com/in/polina-keselman-7b62a81/' in result)
 
     def test_search2(self):
         person = ('Prabuddha', 'Biswas', 'Agilysys', 'CTO')
-        result = person_search(self.driver, person)
+        result = person_search(person)
         self.assertTrue('https://www.linkedin.com/in/prabuddha-biswas-41a357/' in result)
 
 
-class TestProfile(BrowserTest):
+class TestProfile():
     """Test the profile functionality."""
     def test_profile1(self):
         url = 'https://www.linkedin.com/in/polina-keselman-7b62a81/'
-        profile = person_profile(self.driver, url)
+        profile = person_profile(url)
         self.assertEqual(profile['name'], 'Polina Keselman')
         self.assertGreater(len(profile['experience']), 4)
         self.assertEqual(profile['experience'][2]['institution'], 'LexisNexis Inc')
@@ -147,14 +151,8 @@ class TestProfile(BrowserTest):
 
     def test_profile2(self):
         url = 'https://www.linkedin.com/in/prabuddha-biswas-41a357/'
-        profile = person_profile(self.driver, url)
+        profile = person_profile(url)
         print(profile)
-
-    def no_test_to_do(self):
-        # 'https://www.linkedin.com/in/jnathanhanna/'
-        # 'https://www.linkedin.com/in/shim-onster-15b798177/'
-        # 'https://www.linkedin.com/in/yakovkeselman/'
-        return self.driver
 
 
 if __name__ == '__main__':

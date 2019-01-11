@@ -9,8 +9,8 @@ from .objects import Experience, Education, Scraper
 class Person(Scraper):
     """Person scraper."""
     def __init__(self, linkedin_url, driver):
+        self.name = ''
         self.linkedin_url = linkedin_url
-        self.name = name
         self.experiences = []
         self.educations = []
         self.driver = driver
