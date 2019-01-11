@@ -10,7 +10,7 @@ https://github.com/yakovkeselman/linkedin_scraper
 import unittest
 from os import getenv
 from time import sleep
-from random import random, shuffle
+from random import random
 import pickle
 
 from selenium import webdriver
@@ -44,9 +44,7 @@ COOKIES = 'linkedin_cookies.pkl'
 
 def linked_in_home() -> webdriver.Chrome:
     """Returns driver pointing to LI home page of the person."""
-    # specifies the path to the chromedriver.exe
     driver = webdriver.Chrome('chromedriver')
-
     driver.get(LI_URL)
 
     try:
@@ -74,9 +72,9 @@ def linked_in_home() -> webdriver.Chrome:
     return driver
 
 
-def search_for_person(driver: webdriver.Chrome, attrs: tuple) -> list:
+def person_search(attrs: tuple, driver: webdriver.Chrome) -> list:
     """Search for a single person; assumes only few results."""
-    if search_for_person.counter > 0:
+    if person_search.counter > 0:
         # go back to an empty search window; clearing it does not work.
         driver.execute_script("window.history.go(-1)")
 
@@ -94,45 +92,70 @@ def search_for_person(driver: webdriver.Chrome, attrs: tuple) -> list:
             pass
 
     # TODO: need to wait for a bit; TODO: something better.
-    sleep(3)
+    sleep(2.5+2.5*random())
     elts = driver.find_elements_by_class_name("search-result__result-link")
-    search_for_person.counter += 1
+    person_search.counter += 1
     return [elt.get_attribute("href") for elt in elts]
 
 
-search_for_person.counter = 0
+person_search.counter = 0
 
 
-def profile_test():
-    driver = linked_in_home()
-    profile_urls = [
-        'https://www.linkedin.com/in/polina-keselman-7b62a81/',
-        'https://www.linkedin.com/in/jnathanhanna/',
-        'https://www.linkedin.com/in/shim-onster-15b798177/',
-        'https://www.linkedin.com/in/yakovkeselman/',
-    ]
-    shuffle(profile_urls)
-    for profile_url in profile_urls:
-        person = Person(profile_url, driver=driver)
-        person.scrape(close_on_complete=False, timeout=10)
-        print(person)
-        print(3*'\n')
-        sleep(2+5*random())
+def person_profile(url: str, driver: webdriver.Chrome) -> dict:
+    """Fetch a person's profile based on their LI URL."""
+    person = Person(url, driver)
+    person.scrape(close_on_complete=False, timeout=10)
+    sleep(2+5*random())
+    return person.to_dict()
 
 
-class TestSearch(unittest.TestCase):
-    def test_search(self):
-        driver = linked_in_home()
+class BrowserTest(unittest.TestCase):
+    @staticmethod
+    def setUpClass():
+        BrowserTest.driver = linked_in_home()
 
-        p1 = ('Polina', 'Keselman', 'ADP', 'Principal Software Engineer')
-        r1 = search_for_person(driver, p1)
-        self.assertTrue('https://www.linkedin.com/in/polina-keselman-7b62a81/' in r1)
+    @staticmethod
+    def tearDownClass():
+        BrowserTest.driver.close()
+        BrowserTest.driver = None
 
-        p2 = ('Prabuddha', 'Biswas', 'Agilysys', 'CTO')
-        r2 = search_for_person(driver, p2)
-        self.assertTrue('https://www.linkedin.com/in/prabuddha-biswas-41a357/' in r2)
+
+class TestSearch(BrowserTest):
+    """Test the search functionality."""
+    def test_search1(self):
+        person = ('Polina', 'Keselman', 'ADP', 'Principal Software Engineer')
+        result = person_search(self.driver, person)
+        self.assertTrue('https://www.linkedin.com/in/polina-keselman-7b62a81/' in result)
+
+    def test_search2(self):
+        person = ('Prabuddha', 'Biswas', 'Agilysys', 'CTO')
+        result = person_search(self.driver, person)
+        self.assertTrue('https://www.linkedin.com/in/prabuddha-biswas-41a357/' in result)
+
+
+class TestProfile(BrowserTest):
+    """Test the profile functionality."""
+    def test_profile1(self):
+        url = 'https://www.linkedin.com/in/polina-keselman-7b62a81/'
+        profile = person_profile(self.driver, url)
+        self.assertEqual(profile['name'], 'Polina Keselman')
+        self.assertGreater(len(profile['experience']), 4)
+        self.assertEqual(profile['experience'][2]['institution'], 'LexisNexis Inc')
+        self.assertGreater(len(profile['education']), 1)
+        self.assertEqual(profile['education'][0]['institution'], 'Georgia State University')
+        print(profile)
+
+    def test_profile2(self):
+        url = 'https://www.linkedin.com/in/prabuddha-biswas-41a357/'
+        profile = person_profile(self.driver, url)
+        print(profile)
+
+    def no_test_to_do(self):
+        # 'https://www.linkedin.com/in/jnathanhanna/'
+        # 'https://www.linkedin.com/in/shim-onster-15b798177/'
+        # 'https://www.linkedin.com/in/yakovkeselman/'
+        return self.driver
 
 
 if __name__ == '__main__':
     unittest.main(warnings='ignore')
-

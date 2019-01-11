@@ -1,44 +1,32 @@
-import requests
-from lxml import html
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from .functions import time_divide
 from .objects import Experience, Education, Scraper
-import os
+
 
 class Person(Scraper):
     """Person scraper."""
-    def __init__(self, linkedin_url=None, name=None, driver=None):
+    def __init__(self, linkedin_url, driver):
         self.linkedin_url = linkedin_url
         self.name = name
         self.experiences = []
         self.educations = []
-
-        if driver is None:
-            driver = webdriver.Chrome()
-        driver.get(linkedin_url)
         self.driver = driver
+        driver.get(linkedin_url)
 
-
-    def add_experience(self, experience):
-        self.experiences.append(experience)
-
-    def add_education(self, education):
-        self.educations.append(education)
-
-    @staticmethod
-    def to_str(s1):
-        s2 = ''.join([chr(c) for c in s1 if c < 128])
-        s3 = s2.replace('\n', ' ')
-        return ' '.join([elt for elt in s3.split(' ') if len(elt) > 0])
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'url': self.linkedin_url,
+            'experience': [exp.to_dict() for exp in self.experiences],
+            'education': [ed.to_dict() for ed in self.educations],
+        }
 
     def scrape(self, close_on_complete=True, timeout=3):
         driver = self.driver
-        self.name = driver.find_element_by_class_name("pv-top-card-section__name").text.encode('utf-8').strip()
-        self.name = self.to_str(self.name)
+        self.name = self.class_to_text(driver, "pv-top-card-section__name")
 
         driver.execute_script("window.scrollTo(0, Math.ceil(document.body.scrollHeight/2));")
 
@@ -48,23 +36,28 @@ class Person(Scraper):
             # get experience
             exp = driver.find_element_by_id("experience-section")
             for position in exp.find_elements_by_class_name("pv-position-entity"):
-                position_title = position.find_element_by_tag_name("h3").text.encode('utf-8').strip()
-                position_title = self.to_str(position_title)
+                title = self.tag_to_text(position, "h3")
                 try:
-                    company = position.find_element_by_class_name("pv-entity__secondary-title").text.encode('utf-8').strip()
-                    company = self.to_str(company)
+                    company = self.class_to_text(position, "pv-entity__secondary-title")
                 except NoSuchElementException:
                     company = 'Unknown'
 
                 try:
-                    times = position.find_element_by_class_name("pv-entity__date-range").text.encode('utf-8').strip()
-                    times = self.to_str(times)
+                    descr = self.class_to_text(position, "pv-entity__description")
+                except NoSuchElementException:
+                    descr = 'Unknown'
+
+                try:
+                    times = self.class_to_text(position, "pv-entity__date-range")
                     from_date, to_date = time_divide(times)
                 except:
                     from_date, to_date = (None, None)
-                experience = Experience(position_title=position_title, from_date=from_date, to_date=to_date)
-                experience.institution_name = company
-                self.add_experience(experience)
+
+                self.experiences.append(Experience(
+                    institution=company, title=title,
+                    from_date=from_date, to_date=to_date,
+                    description=descr
+                ))
         except TimeoutException:
             pass
 
@@ -77,16 +70,15 @@ class Person(Scraper):
             edu = driver.find_element_by_id("education-section")
             for school in edu.find_elements_by_class_name("pv-profile-section__sortable-item"):
                 try:
-                    university = school.find_element_by_class_name("pv-entity__school-name").text.encode('utf-8').strip()
-                    university = self.to_str(university)
-                    degree = school.find_element_by_class_name("pv-entity__degree-name").text.encode('utf-8').strip()
-                    degree = self.to_str(degree)
-                    times = school.find_element_by_class_name("pv-entity__dates").text.encode('utf-8').strip()
-                    times = self.to_str(times)
+                    university = self.class_to_text(school, "pv-entity__school-name")
+                    degree = self.class_to_text(school, "pv-entity__degree-name")
+                    times = self.class_to_text(school, "pv-entity__dates")
                     from_date, to_date = time_divide(times)
-                    education = Education(from_date=from_date, to_date=to_date, degree=degree)
-                    education.institution_name = university
-                    self.add_education(education)
+                    self.educations.append(Education(
+                        institution=university,
+                        from_date=from_date, to_date=to_date,
+                        degree=degree
+                    ))
                 except:
                     pass
         except TimeoutException:
