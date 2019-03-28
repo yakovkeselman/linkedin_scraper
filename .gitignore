@@ -1,3 +1,4 @@
+*.pkl
 *.swp
 linkedin_user_scraper.egg-info
 linkedin_scraper.egg-info

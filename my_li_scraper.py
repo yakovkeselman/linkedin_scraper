@@ -1,13 +1,9 @@
 """
-A test script for scraping linked-in in Python.
-
 Borrowed from:
 https://www.linkedin.com/pulse/how-easy-scraping-data-from-linkedin-profiles-david-craven/
 https://github.com/yakovkeselman/linkedin_scraper
-
 """
 
-import unittest
 from os import getenv
 from time import sleep
 from random import random
@@ -19,8 +15,8 @@ from linkedin_scraper import Person
 user_email = getenv("USER_EMAIL")
 user_pwd = getenv("USER_PWD")
 
-assert user_email, "set 'USER_EMAIL' to LI user email"
-assert user_pwd, "set 'USER_PWD' to LI user password"
+assert user_email, "set 'USER_EMAIL' to your LI user email"
+assert user_pwd, "set 'USER_PWD' to your LI user password"
 
 
 def my_send_keys(form, chars):
@@ -122,38 +118,3 @@ def person_profile(url: str) -> dict:
     # should be safe to go back once; needed for search and profile to work.
     driver.execute_script("window.history.go(-1)")
     return person.to_dict()
-
-
-class TestSearch:
-    """Test the search functionality."""
-    def test_search1(self):
-        person = ('Polina', 'Keselman', 'ADP', 'Principal Software Engineer')
-        result = person_search(person)
-        self.assertTrue('https://www.linkedin.com/in/polina-keselman-7b62a81/' in result)
-
-    def test_search2(self):
-        person = ('Prabuddha', 'Biswas', 'Agilysys', 'CTO')
-        result = person_search(person)
-        self.assertTrue('https://www.linkedin.com/in/prabuddha-biswas-41a357/' in result)
-
-
-class TestProfile():
-    """Test the profile functionality."""
-    def test_profile1(self):
-        url = 'https://www.linkedin.com/in/polina-keselman-7b62a81/'
-        profile = person_profile(url)
-        self.assertEqual(profile['name'], 'Polina Keselman')
-        self.assertGreater(len(profile['experience']), 4)
-        self.assertEqual(profile['experience'][2]['institution'], 'LexisNexis Inc')
-        self.assertGreater(len(profile['education']), 1)
-        self.assertEqual(profile['education'][0]['institution'], 'Georgia State University')
-        print(profile)
-
-    def test_profile2(self):
-        url = 'https://www.linkedin.com/in/prabuddha-biswas-41a357/'
-        profile = person_profile(url)
-        print(profile)
-
-
-if __name__ == '__main__':
-    unittest.main(warnings='ignore')
