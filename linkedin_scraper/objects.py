@@ -15,17 +15,23 @@ class Institution:
     def to_dict(self):
         return vars(self)
 
-
 class Experience(Institution):
-    def __init__(self, institution=None, title=None, from_date=None, to_date=None, description=None):
-        self.institution = institution
+    from_date = None
+    to_date = None
+    description = None
+    position_title = None
+    duration = None
+
+    def __init__(self, from_date = None, to_date = None, description = None, position_title = None, duration = None, location = None):
         self.from_date = from_date
         self.to_date = to_date
         self.description = description
-        self.title = title
+        self.position_title = position_title
+        self.duration = duration
+        self.location = location
 
     def __repr__(self):
-        return "{title} at {institution} from {from_date} to {to_date}; details: {description}".format(**self.to_dict())
+        return "{position_title} at {company} from {from_date} to {to_date} for {duration} based at {location}".format( from_date = self.from_date, to_date = self.to_date, position_title = self.position_title, company = self.institution_name, duration = self.duration, location = self.location)
 
 
 class Education(Institution):
@@ -58,6 +64,7 @@ class Scraper(object):
             pass
         return False
 
+<<<<<<< HEAD
     @staticmethod
     def to_str(elt):
         s1 = elt.text.encode('utf-8').strip()
@@ -72,3 +79,12 @@ class Scraper(object):
     def tag_to_text(self, parent, tag_name):
         elt = parent.find_element_by_tag_name(tag_name)
         return self.to_str(elt)
+=======
+    def __find_element_by_xpath__(self, tag_name):
+        try:
+            self.driver.find_element_by_xpath(tag_name)
+            return True
+        except:
+            pass
+        return False
+>>>>>>> upstream/master
